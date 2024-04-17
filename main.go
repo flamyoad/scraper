@@ -26,6 +26,8 @@ func main() {
 	switch {
 	case strings.Contains(url, "e-hentai.org"):
 		scraper = &EhScraper{}
+	case strings.Contains(url, "kemono.su"):
+		scraper = &KemonoScraper{}
 	default:
 		log.Fatal("Domain is not supported")
 		os.Exit(1)
