@@ -16,11 +16,14 @@ import (
 
 type EhScraper struct{}
 
-func (scraper *EhScraper) Scrape(url string) {
+func (scraper *EhScraper) Scrape(url string, headless bool) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 	channel := make(chan string)
-	parentCtx, cancel := chromedp.NewContext(context.Background())
+	ctx, cancel := chromedp.NewExecAllocator(context.Background(), append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", headless))...)
+	defer cancel()
+
+	parentCtx, cancel := chromedp.NewContext(ctx)
 	defer cancel()
 
 	go scraper.consumeImageLinks(parentCtx, channel, &waitGroup)
@@ -37,7 +40,9 @@ func (scraper *EhScraper) consumeImageLinks(parentCtx context.Context, c chan st
 			log.Print("Failed to download " + url)
 			return
 		}
-		scraper.downloadImage(parentCtx, url)
+		if err := scraper.downloadImage(parentCtx, url); err != nil {
+			log.Fatal(err)
+		}
 		time.Sleep(1000 * time.Millisecond)
 	}
 }
@@ -60,6 +65,7 @@ func (scraper *EhScraper) produceImageLinks(url string, parentCtx context.Contex
 		chromedp.Navigate(url),
 		chromedp.WaitVisible(`body`, chromedp.ByQuery),
 		chromedp.Nodes(`#gdt > div > div > a`, &nodes, chromedp.ByQueryAll),
+		// chromedp.Nodes(`#gdt > div > a`, &nodes, chromedp.ByQueryAll),
 		chromedp.InnerHTML(`html`, &fullHtml),
 	); err != nil {
 		log.Fatal(err)

@@ -14,11 +14,12 @@ import (
 
 type KemonoScraper struct{}
 
-func (scraper *KemonoScraper) Scrape(url string) {
+func (scraper *KemonoScraper) Scrape(url string, headless bool) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 	channel := make(chan DownloadItem)
-	parentCtx, cancel := chromedp.NewContext(context.Background())
+	parentCtx, cancel := chromedp.NewExecAllocator(context.Background(), append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", headless))...)
+
 	defer cancel()
 
 	go scraper.consumeImageLinks(parentCtx, channel, &waitGroup)
@@ -35,7 +36,9 @@ func (scraper *KemonoScraper) consumeImageLinks(parentCtx context.Context, c cha
 			log.Print("Failed to download " + item.url)
 			return
 		}
-		scraper.downloadImage(parentCtx, item)
+		if err := scraper.downloadImage(parentCtx, item); err != nil {
+			log.Fatal(err)
+		}
 		time.Sleep(2500 * time.Millisecond) // Kemono is very bonkers on error 429
 	}
 }

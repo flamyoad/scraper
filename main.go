@@ -4,16 +4,21 @@ import (
 	"flag"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 )
 
 type Scraper interface {
-	Scrape(url string)
+	Scrape(url string, headless bool)
 }
 
 func main() {
+	defer os.Exit(0)
+
 	var url string
+	var headless bool
 	flag.StringVar(&url, "url", "", "URL of the website")
+	flag.BoolVar(&headless, "headless", true, "Run as headless Chrome browser")
 	flag.Parse()
 
 	if url == "" {
@@ -32,5 +37,7 @@ func main() {
 		log.Fatal("Domain is not supported")
 		os.Exit(1)
 	}
-	scraper.Scrape(url)
+	scraper.Scrape(url, headless)
+
+	runtime.Goexit()
 }
